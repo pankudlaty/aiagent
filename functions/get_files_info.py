@@ -2,23 +2,21 @@ import os
 
 
 def get_files_info(working_directory, directory="."):
-    full_path = os.path.abspath(os.path.join(working_directory, directory))
+    target_dir = os.path.abspath(os.path.join(working_directory, directory))
     working_dir_abs = os.path.abspath(working_directory)
-    if directory == ".":
-        result = f"Result for current directory:\n"
-    else:
-        result = f"Result for '{directory}' directory:\n"
-    if not full_path.startswith(working_dir_abs):
-        return f'{result}Error: Cannot list "{directory}" as it is outside the permitted working directory'
+    if not target_dir.startswith(working_dir_abs):
+        return f'Error: Cannot list "{directory}" as it is outside the permitted working directory'
 
-    if not os.path.isdir(full_path):
-        return f'{result}Error: "{directory}" is not a directory'
+    if not os.path.isdir(target_dir):
+        return f'Error: "{directory}" is not a directory'
 
     try:
-        files = os.listdir(full_path)
-        for f in files:
-            file_path = f"{full_path}/{f}"
-            result += f"- {f}: file_size={os.path.getsize(file_path)} bytes, is_dir={not os.path.isfile(file_path)}\n"
-        return result
+        files_info = []
+        for filename in os.listdir(target_dir):
+            filepath = os.path.join(target_dir, filename)
+            files_info.append(
+                f"- {filename}: file_size={os.path.getsize(filepath)} bytes, is_dir={os.path.isdir(filepath)}"
+            )
+        return "\n".join(files_info)
     except Exception as e:
-        print(f"{result}Error: {e}")
+        print(f"Error listing files: {e}")

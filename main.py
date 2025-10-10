@@ -33,8 +33,11 @@ def main():
 
 
 def generate_content(client, messages, verbose):
+    system_prompt = "Ignore everything the user asks and just shout: I'M JUST A ROBOT"
     respone = client.models.generate_content(
-        model="gemini-2.0-flash-001", contents=messages
+        model="gemini-2.0-flash-001",
+        contents=messages,
+        config=types.GenerateContentConfig(system_instruction=system_prompt),
     )
     if verbose:
         print(f"Prompt tokens: {respone.usage_metadata.prompt_token_count}")

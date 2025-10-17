@@ -1,3 +1,4 @@
+from re import escape
 import os, sys
 from dotenv import load_dotenv
 from google import genai
@@ -31,7 +32,21 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
-    generate_content(client, messages, verbose)
+    iters = 0
+    while True:
+        iters += 1
+        if iters > 20:
+            print(f"Max iterations (20) reached.")
+            sys.exit(1)
+
+        try:
+            fin_resp = generate_content(client, messages, verbose)
+            if fin_resp:
+                print("Final response")
+                print(fin_resp)
+                break
+        except Exception as e:
+            print(f"Error in generate content: {e}")
 
 
 def generate_content(client, messages, verbose):
@@ -52,22 +67,30 @@ def generate_content(client, messages, verbose):
             tools=[available_functions], system_instruction=system_prompt
         ),
     )
+
     if verbose:
         print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
         print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
+    if response.candidates:
+        for cand in response.candidates:
+            func_call_content = cand.content
+            messages.append(func_call_content)
     if not response.function_calls:
         return response.text
 
-    for function_call_part in response.function_calls:
-        function_call_result = call_function(function_call_part, verbose=verbose)
-
-        try:
-            func_resp = function_call_result.parts[0].function_response.response
-        except Exception:
-            raise RuntimeError("Function call returned invaild Content structure")
-
+    func_resp = []
+    for func_call_part in response.function_calls:
+        func_call_result = call_function(func_call_part, verbose)
+        if (
+            not func_call_result.parts
+            or not func_call_result.parts[0].function_response
+        ):
+            raise Exception("empyt function call result")
         if verbose:
-            print(f"-> {func_resp}")
+            print(f"-> {func_call_result.parts[0].function_response.response}")
+        func_resp.append(func_call_result.parts[0])
+
+    messages.append(types.Content(role="user", parts=func_resp))
 
 
 if __name__ == "__main__":
